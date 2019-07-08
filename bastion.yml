@@ -1,0 +1,84 @@
+Description:
+  B. White / Udacity IaC Project - Bastion Host Template - Deploys a bastion host
+  with access restricted to my device's IP.
+
+Parameters:
+
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resources
+    Type: String
+
+  MySSHAccess:
+    Description: The IP address range that can be used to SSH to the bastion instance
+    Type: String
+    Default: X.X.X.X/X
+
+Resources:
+
+  BastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: 't2.micro'
+      AvailabilityZone: 'us-east-1a'
+      ImageId: 'ami-035b3c7efe6d061d5'
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-PUB1-SN"
+      KeyName: 'KeyName'
+      SecurityGroupIds:
+        - !Ref BastionSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Bastion Host
+
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref MySSHAccess
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Bastion SG
+
+  BastionRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Bastion Routes
+
+  BastionSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref BastionRouteTable
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-PUB1-SN"
+
+  BastionRouteToInternet:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPC-IGW"
+      RouteTableId:
+        !Ref BastionRouteTable
+
+Outputs:
+
+  BastionSG:
+    Description: A reference to the bastion node Security Group
+    Value: !Ref BastionSecurityGroup
+    Export:
+      Name: !Sub ${EnvironmentName}-Bastion-SG
