@@ -1,2 +1,5 @@
 # CloudFormation
-CloudFormation Templates
+AWS CloudFormation Templates
+---
+
+Simple AWS templates for creating different resources. 
